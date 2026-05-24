@@ -1,7 +1,5 @@
 function SeatGrid({
-  seats,
-  selectedSeats,
-  handleSeatClick
+  seats
 }) {
 
   const rowLabels = [
@@ -11,20 +9,24 @@ function SeatGrid({
     "D",
     "E",
     "F",
-    "G"
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O"
   ]
 
   return (
 
     <div className="cinema-wrapper">
 
-      <div className="screen">
-        SCREEN
-      </div>
-
       <div className="grid">
 
-        {seats.map((row, rowIndex) => (
+        {seats?.map((row, rowIndex) => (
 
           <div
             className="seat-row-container"
@@ -39,12 +41,6 @@ function SeatGrid({
 
               {row.map((seat, colIndex) => {
 
-                const seatId =
-                  `${rowIndex}-${colIndex}`
-
-                const isSelected =
-                  selectedSeats.includes(seatId)
-
                 if (seat === " ") {
 
                   return (
@@ -53,31 +49,16 @@ function SeatGrid({
                       className="aisle"
                     />
                   )
+
                 }
 
                 return (
 
                   <div
                     key={colIndex}
-                    className={`
-                      seat
-                      ${seat}
-                      ${
-                        isSelected
-                          ? 'selected'
-                          : ''
-                      }
-                    `}
-                    onClick={() =>
-                      handleSeatClick(
-                        rowIndex,
-                        colIndex,
-                        seat
-                      )
-                    }
+                    className={`seat ${seat}`}
                   >
 
-                    {rowLabels[rowIndex]}
                     {colIndex + 1}
 
                   </div>
@@ -98,9 +79,14 @@ function SeatGrid({
 
       </div>
 
+      <div className="screen">
+        SCREEN
+      </div>
+
     </div>
 
   )
+
 }
 
 export default SeatGrid

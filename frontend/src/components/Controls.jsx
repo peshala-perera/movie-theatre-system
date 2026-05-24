@@ -1,41 +1,24 @@
 function Controls({
-  groupSize,
-  setGroupSize,
-  allocateSeats,
-  bookSelectedSeats
+  openAutoModal
 }) {
 
   return (
 
     <div className="controls">
 
-      <input
-        type="number"
-        min="1"
-        max="7"
-        value={groupSize}
-        onChange={(e) =>
-          setGroupSize(e.target.value)
-        }
-        placeholder="Group Size"
-      />
-
-      <button 
-        className="auto-book-btn"
-        onClick={allocateSeats}>
-        Auto Allocate Seats
-      </button>
-
       <button
-        className="manual-book-btn"
-        onClick={bookSelectedSeats}
+        className="auto-book-btn"
+        onClick={openAutoModal}
       >
-        Manual Allocate Seats
+
+        Auto Allocate Seats
+
       </button>
 
     </div>
 
   )
+
 }
 
 export default Controls

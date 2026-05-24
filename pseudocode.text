@@ -1,0 +1,355 @@
+let's make this to a flowchart
+
+
+ALGORITHM MovieTheatreSeatAllocation
+
+INPUT:
+    userID
+    groupSize
+    isDisabled
+    hasCompanion
+    isVIP
+    adminOverride
+    bookingType
+
+DATA:
+    theatreLayout[][]
+    seatType[][]
+    occupiedSeats[]
+    brokenSeats[]
+    cancelledSeats[]
+
+OUTPUT:
+    allocatedSeats[]
+    bookingStatus
+
+BEGIN
+
+//---------------------------------------------------
+// STEP 1 — VALIDATE USER INPUT
+//---------------------------------------------------
+
+IF groupSize <= 0 THEN
+    DISPLAY "Invalid group size"
+    STOP
+END IF
+
+IF groupSize > 7 THEN
+    DISPLAY "Large groups must be split"
+    SPLIT group into smaller groups
+END IF
+
+
+//---------------------------------------------------
+// STEP 2 — LOAD CURRENT SESSION DATA
+//---------------------------------------------------
+
+LOAD theatreLayout
+LOAD occupiedSeats
+LOAD brokenSeats
+LOAD cancelledSeats
+
+occupancyRate = calculateOccupancy()
+
+// Random broken seats generated every session
+FOR each brokenSeat
+    MARK brokenSeat as UNAVAILABLE
+END FOR
+
+
+//---------------------------------------------------
+// STEP 3 — APPLY ADMIN OVERRIDE
+//---------------------------------------------------
+
+IF adminOverride = TRUE THEN
+
+    allocatedSeats = allocateAnyAvailableSeats(groupSize)
+
+    IF allocatedSeats found THEN
+        CONFIRM booking
+        DISPLAY allocatedSeats
+    ELSE
+        DISPLAY "No seats available"
+    END IF
+
+    STOP
+
+END IF
+
+
+//---------------------------------------------------
+// STEP 4 — REMOVE INVALID SEATS
+//---------------------------------------------------
+
+FOR each seat in theatreLayout
+
+    IF seat is occupied THEN
+        MARK seat unavailable
+    END IF
+
+    IF seat is broken THEN
+        MARK seat unavailable
+    END IF
+
+END FOR
+
+
+//---------------------------------------------------
+// STEP 5 — HANDLE DISABLED USERS
+//---------------------------------------------------
+
+IF isDisabled = TRUE THEN
+
+    disabilitySeats = findAvailableDisabilitySeats()
+
+    IF hasCompanion = TRUE THEN
+
+        allocatedSeats = findAdjacentDisabilitySeats(groupSize)
+
+    ELSE
+
+        allocatedSeats = findSingleDisabilitySeat()
+
+    END IF
+
+    IF allocatedSeats found THEN
+
+        CONFIRM booking
+        UPDATE theatreLayout
+        DISPLAY allocatedSeats
+        STOP
+
+    ELSE
+
+        DISPLAY "No disability seats available"
+        STOP
+
+    END IF
+
+END IF
+
+
+//---------------------------------------------------
+// STEP 6 — HANDLE VIP USERS
+//---------------------------------------------------
+
+IF isVIP = TRUE THEN
+
+    vipSeats = findAvailableVIPSeats(groupSize)
+
+    IF vipSeats found THEN
+
+        allocatedSeats = vipSeats
+
+        CONFIRM booking
+        UPDATE theatreLayout
+        DISPLAY allocatedSeats
+        STOP
+
+    END IF
+
+END IF
+
+
+//---------------------------------------------------
+// STEP 7 — RANK ROWS BY USER PREFERENCE
+//---------------------------------------------------
+
+// Real cinema behavior:
+// middle-center > middle-side > back > front
+
+rankedRows = rankRowsBySeatQuality()
+
+// Avoid front rows unless needed
+
+
+//---------------------------------------------------
+// STEP 8 — SOLO USER LOGIC
+//---------------------------------------------------
+
+IF groupSize = 1 THEN
+
+    // Preserve center blocks for future groups
+
+    candidateSeats = findEdgeSeats()
+
+ELSE
+
+    candidateSeats = searchAdjacentSeats(groupSize)
+
+END IF
+
+
+//---------------------------------------------------
+// STEP 9 — SEARCH ADJACENT SEATS
+//---------------------------------------------------
+
+FOR each row in rankedRows
+
+    continuousSeats = []
+
+    FOR each seat in row
+
+        IF seat available THEN
+
+            ADD seat to continuousSeats
+
+        ELSE
+
+            CLEAR continuousSeats
+
+        END IF
+
+        //---------------------------------------------------
+        // Enough seats found
+        //---------------------------------------------------
+
+        IF size(continuousSeats) = groupSize THEN
+
+            candidateBlock = continuousSeats
+
+            //---------------------------------------------------
+            // STEP 10 — CHECK FOR SCATTERED SINGLE SEATS
+            //---------------------------------------------------
+
+            simulatedLayout = simulateBooking(candidateBlock)
+
+            IF createsSingleSeatGap(simulatedLayout) THEN
+
+                REJECT candidateBlock
+
+            ELSE
+
+                allocatedSeats = candidateBlock
+                GOTO CONFIRM_BOOKING
+
+            END IF
+
+        END IF
+
+    END FOR
+
+END FOR
+
+
+//---------------------------------------------------
+// STEP 11 — HANDLE NEARLY FULL THEATRE
+//---------------------------------------------------
+
+IF occupancyRate >= 85% THEN
+
+    // Relax some restrictions carefully
+
+    allocatedSeats = relaxedSeatSearch(groupSize)
+
+    IF allocatedSeats found THEN
+        GOTO CONFIRM_BOOKING
+    END IF
+
+END IF
+
+
+//---------------------------------------------------
+// STEP 12 — SPLIT GROUP AS LAST OPTION
+//---------------------------------------------------
+
+IF no adjacent seats found THEN
+
+    IF groupSize > largestAvailableBlock THEN
+
+        allocatedSeats = splitGroupCarefully(groupSize)
+
+        IF allocatedSeats found THEN
+            GOTO CONFIRM_BOOKING
+        END IF
+
+    END IF
+
+END IF
+
+
+//---------------------------------------------------
+// STEP 13 — BOOKING FAILURE
+//---------------------------------------------------
+
+DISPLAY "No Adjacent Seats Available"
+STOP
+
+
+//---------------------------------------------------
+// STEP 14 — CONFIRM BOOKING
+//---------------------------------------------------
+
+LABEL CONFIRM_BOOKING
+
+FOR each seat in allocatedSeats
+
+    MARK seat as OCCUPIED
+
+END FOR
+
+UPDATE theatreLayout
+SAVE booking data
+
+DISPLAY "Booking Successful"
+DISPLAY allocatedSeats
+
+STOP
+
+
+//---------------------------------------------------
+// STEP 15 — CANCELLATION LOGIC
+//---------------------------------------------------
+
+FUNCTION cancelBooking(bookingID)
+
+    releasedSeats = getBookingSeats(bookingID)
+
+    FOR each seat in releasedSeats
+
+        MARK seat AVAILABLE
+
+    END FOR
+
+    // Reorganize scattered gaps
+    optimizeReleasedSeats()
+
+END FUNCTION
+
+
+//---------------------------------------------------
+// SUPPORTING FUNCTIONS
+//---------------------------------------------------
+
+FUNCTION createsSingleSeatGap(layout)
+
+    FOR each row
+
+        IF pattern = occupied-empty-occupied THEN
+            RETURN TRUE
+        END IF
+
+    END FOR
+
+    RETURN FALSE
+
+END FUNCTION
+
+
+FUNCTION rankRowsBySeatQuality()
+
+    // Middle-center rows highest score
+    // Front rows lowest score
+
+END FUNCTION
+
+
+FUNCTION relaxedSeatSearch(groupSize)
+
+    // Used during crowded situations
+    // Slightly relax gap-prevention rules
+
+END FUNCTION
+
+
+END ALGORITHM
