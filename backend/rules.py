@@ -1,0 +1,65 @@
+#find adjacent seats for small groups
+def find_adjacent_seats(theatre, no_of_seats, allowed_types):
+    allocated = []
+    for row_index, row in enumerate(theatre.seats):
+        current_block = []
+        for col_index, seat in enumerate(row):
+            if seat in allowed_types:
+                current_block.append(
+                    (row_index, col_index)
+                )
+            else:
+                current_block = []
+            if len(current_block) == no_of_seats:
+                return current_block
+    return allocated
+
+#find edge seats for single customers
+def find_edge_seat(theatre, allowed_types):
+    for row_index, row in enumerate(theatre.seats):
+        if row[0] in allowed_types:
+            return [(row_index, 0)]
+        if row[-1] in allowed_types:
+            return [(row_index, len(row)-1)]
+    return []
+
+#split large groups across rows if adjacent seats not available
+def split_large_group(theatre, no_of_seats, allowed_types):
+    available_blocks = []
+    for row_index, row in enumerate(theatre.seats):
+        current_block = []
+        for col_index, seat in enumerate(row):
+            if seat in allowed_types:
+                current_block.append((row_index, col_index))
+            else:
+                if len(current_block) > 0:
+                    available_blocks.append(current_block) 
+                current_block = []
+        if len(current_block) > 0:
+            available_blocks.append(current_block)
+    #largest blocks first
+    available_blocks.sort(key=len, reverse=True)
+    allocated = []
+    remaining = no_of_seats
+    #take largest blocks first
+    for block in available_blocks:
+        if remaining <= 0:
+            break
+        take_count = min(len(block), remaining)
+        allocated.extend(block[:take_count])
+        remaining -= take_count
+    if remaining == 0:
+        return allocated
+    return []
+
+def find_adjacent_seats_in_rows(rows, group_size, allowed_types):
+    for row_index, row in rows:
+        current_block = []
+        for col_index, seat in enumerate(row):
+            if seat in allowed_types:
+                current_block.append((row_index, col_index))
+            else:
+                current_block = []
+            if len(current_block) == group_size:
+                return current_block
+    return []

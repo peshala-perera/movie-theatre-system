@@ -1,0 +1,279 @@
+BEGIN Movie Theatre Seating Allocation System
+
+START backend server using Flask
+
+CREATE separate cinema sessions for each movie
+    - Moana 2
+    - Zootopia 2
+    - UP
+    - Lio & Stitch
+    - Tangled
+
+FOR every movie session
+
+    LOAD predefined theatre layout
+
+    FOR every position in the layout
+
+        IF value represents a valid seat
+            CREATE regular available seat "O"
+
+        ELSE
+            CREATE empty walkway space " "
+
+    END FOR
+
+
+    GENERATE disability seating
+
+        SELECT only front rows
+
+        RANDOMLY place disability seat pairs together
+
+        MARK disability seats as "D"
+
+        MAKE SURE disability seats stay adjacent
+
+
+    GENERATE VIP seating
+
+        SELECT middle cinema rows
+
+        RANDOMLY choose several rows
+
+        CREATE centered VIP seating blocks
+
+        MARK VIP seats as "V"
+
+
+    GENERATE broken seats
+
+        RANDOMLY place broken seats across the theatre
+
+        APPLY restrictions:
+            - Maximum 2 broken seats per row
+            - Broken seats cannot touch each other
+            - Only regular seats can become broken
+
+        MARK broken seats as "B"
+
+END FOR
+
+
+
+USER opens the frontend application
+
+DISPLAY:
+    - Movie dropdown
+    - Seat layout grid
+    - Customer type selector
+    - Booking form
+    - Admin override option
+
+USER selects:
+    - Movie
+    - Number of seats
+    - Customer category
+    - Optional admin mode
+
+SEND booking request to backend
+
+
+
+BEGIN allocation process
+
+READ booking request details
+
+IDENTIFY customer strategy
+
+    IF customer type is VIP
+        strategy = VIP
+
+    ELSE IF customer type is Disabled
+        strategy = DISABLED
+
+    ELSE
+        strategy = REGULAR
+
+
+SET allowed seat category
+
+    VIP users -> VIP seats only
+    Disabled users -> Disability seats first
+    Regular users -> Regular seats only
+
+
+
+BEGIN REGULAR USER LOGIC
+
+IF customer is REGULAR
+
+    IF only 1 seat requested
+
+        SEARCH edge seats first
+
+        REASON:
+            I wanted solo users to avoid blocking
+            large seat groups in the middle
+
+        IF edge seat found
+            ALLOCATE seat
+
+
+    ELSE IF seats requested between 2 and 7
+
+        SEARCH for fully adjacent seats
+
+        FOR every row
+
+            BUILD continuous seat block
+
+            IF requested group size found together
+                RETURN that block immediately
+
+        END FOR
+
+        REASON:
+            Groups should stay together whenever possible
+
+
+    ELSE IF seats requested more than 7
+
+        FIRST:
+            TRY finding one very large adjacent block
+
+        IF large block not possible
+
+            SEARCH all available seat blocks
+
+            STORE every continuous block found
+
+            SORT blocks from largest to smallest
+
+            ALLOCATE largest nearby blocks first
+
+            CONTINUE until all requested seats are assigned
+
+        END IF
+
+        REASON:
+            I wanted large groups to stay as close together
+            as possible instead of splitting randomly
+
+END IF
+
+
+
+BEGIN VIP USER LOGIC
+
+IF customer is VIP
+
+    SEARCH only VIP seating zones
+
+    IF enough adjacent VIP seats exist
+
+        ALLOCATE adjacent VIP seats
+
+    ELSE
+
+        SPLIT booking using nearest VIP blocks
+
+    END IF
+
+    REASON:
+        VIP users should always receive premium seating
+        before normal seats are considered
+
+END IF
+
+
+
+BEGIN DISABLED USER LOGIC
+
+IF customer is DISABLED
+
+    FIRST:
+        SEARCH disability seats
+
+    IF disability seats unavailable
+
+        SECOND:
+            SEARCH nearby front-row regular seats
+
+    IF still unavailable
+
+        THIRD:
+            SEARCH normal regular seating
+
+    END IF
+
+    REASON:
+        I wanted disabled users to receive priority access
+        to accessible seating areas close to entrances
+
+END IF
+
+
+
+BEGIN ADMIN OVERRIDE
+
+IF admin override enabled
+AND normal allocation fails
+
+    IGNORE normal restrictions
+
+    ALLOW booking from:
+        - Regular seats
+        - VIP seats
+        - Disability seats
+
+    USE flexible seat splitting
+
+    REASON:
+        Cinema staff may need emergency manual allocation
+        during crowded situations
+
+END IF
+
+
+
+FINAL VALIDATION
+
+IF no seats allocated
+
+    RETURN booking failure
+
+    DISPLAY:
+        "No seats available"
+
+ELSE
+
+    FOR every allocated seat
+
+        CONVERT row and column into seat labels
+            Example:
+                A5
+                E12
+                J7
+
+        MARK seat as booked using "X"
+
+    END FOR
+
+    RETURN:
+        - Booking success
+        - Allocated seats
+        - Updated seating layout
+        - Allocation strategy used
+
+END IF
+
+
+
+SEND updated seat layout back to frontend
+
+REFRESH seating grid visually
+
+DISPLAY booking result message
+
+END SYSTEM
