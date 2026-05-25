@@ -1,4 +1,3 @@
-from theatre import Theatre
 from strategies import determine_strategy
 from rules import (
     find_adjacent_seats,
@@ -36,17 +35,21 @@ def allocate_seats(theatre, data):
     #single customers get edge seats, small groups get adjacent seats, large groups get split across rows
     if strategy == "REGULAR":
         if no_of_seats == 1:
-            allocated = find_edge_seat(theatre, no_of_seats, allowed_types)
-        if no_of_seats <= 7:
+            allocated = find_edge_seat(theatre, allowed_types)
+        elif no_of_seats <= 7:
             allocated = find_adjacent_seats(theatre, no_of_seats, allowed_types)
         else:
-            allocated = split_large_group(theatre, no_of_seats, allowed_types)
+            allocated = find_adjacent_seats(theatre, no_of_seats, allowed_types)
+            if len(allocated) == 0:
+                allocated = split_large_group(theatre, no_of_seats, allowed_types)
 
     elif strategy == "VIP":
         if no_of_seats <= 7:
             allocated = find_adjacent_seats(theatre, no_of_seats, allowed_types)
         else:
-            allocated = split_large_group(theatre, no_of_seats, allowed_types)
+            allocated = find_adjacent_seats(theatre, no_of_seats, allowed_types)
+            if len(allocated) == 0:
+                allocated = split_large_group(theatre, no_of_seats, allowed_types)
 
 
     #disabled customers get priority for front rows, then adjacent seats, then split across rows

@@ -1,355 +1,279 @@
-let's make this to a flowchart
+BEGIN Movie Theatre Seating Allocation System
+
+START backend server using Flask
+
+CREATE separate cinema sessions for each movie
+    - Moana 2
+    - Zootopia 2
+    - UP
+    - Lio & Stitch
+    - Tangled
+
+FOR every movie session
+
+    LOAD predefined theatre layout
+
+    FOR every position in the layout
+
+        IF value represents a valid seat
+            CREATE regular available seat "O"
+
+        ELSE
+            CREATE empty walkway space " "
+
+    END FOR
 
 
-ALGORITHM MovieTheatreSeatAllocation
+    GENERATE disability seating
 
-INPUT:
-    userID
-    groupSize
-    isDisabled
-    hasCompanion
-    isVIP
-    adminOverride
-    bookingType
+        SELECT only front rows
 
-DATA:
-    theatreLayout[][]
-    seatType[][]
-    occupiedSeats[]
-    brokenSeats[]
-    cancelledSeats[]
+        RANDOMLY place disability seat pairs together
 
-OUTPUT:
-    allocatedSeats[]
-    bookingStatus
+        MARK disability seats as "D"
 
-BEGIN
-
-//---------------------------------------------------
-// STEP 1 — VALIDATE USER INPUT
-//---------------------------------------------------
-
-IF groupSize <= 0 THEN
-    DISPLAY "Invalid group size"
-    STOP
-END IF
-
-IF groupSize > 7 THEN
-    DISPLAY "Large groups must be split"
-    SPLIT group into smaller groups
-END IF
+        MAKE SURE disability seats stay adjacent
 
 
-//---------------------------------------------------
-// STEP 2 — LOAD CURRENT SESSION DATA
-//---------------------------------------------------
+    GENERATE VIP seating
 
-LOAD theatreLayout
-LOAD occupiedSeats
-LOAD brokenSeats
-LOAD cancelledSeats
+        SELECT middle cinema rows
 
-occupancyRate = calculateOccupancy()
+        RANDOMLY choose several rows
 
-// Random broken seats generated every session
-FOR each brokenSeat
-    MARK brokenSeat as UNAVAILABLE
-END FOR
+        CREATE centered VIP seating blocks
+
+        MARK VIP seats as "V"
 
 
-//---------------------------------------------------
-// STEP 3 — APPLY ADMIN OVERRIDE
-//---------------------------------------------------
+    GENERATE broken seats
 
-IF adminOverride = TRUE THEN
+        RANDOMLY place broken seats across the theatre
 
-    allocatedSeats = allocateAnyAvailableSeats(groupSize)
+        APPLY restrictions:
+            - Maximum 2 broken seats per row
+            - Broken seats cannot touch each other
+            - Only regular seats can become broken
 
-    IF allocatedSeats found THEN
-        CONFIRM booking
-        DISPLAY allocatedSeats
-    ELSE
-        DISPLAY "No seats available"
-    END IF
-
-    STOP
-
-END IF
-
-
-//---------------------------------------------------
-// STEP 4 — REMOVE INVALID SEATS
-//---------------------------------------------------
-
-FOR each seat in theatreLayout
-
-    IF seat is occupied THEN
-        MARK seat unavailable
-    END IF
-
-    IF seat is broken THEN
-        MARK seat unavailable
-    END IF
+        MARK broken seats as "B"
 
 END FOR
 
 
-//---------------------------------------------------
-// STEP 5 — HANDLE DISABLED USERS
-//---------------------------------------------------
 
-IF isDisabled = TRUE THEN
+USER opens the frontend application
 
-    disabilitySeats = findAvailableDisabilitySeats()
+DISPLAY:
+    - Movie dropdown
+    - Seat layout grid
+    - Customer type selector
+    - Booking form
+    - Admin override option
 
-    IF hasCompanion = TRUE THEN
+USER selects:
+    - Movie
+    - Number of seats
+    - Customer category
+    - Optional admin mode
 
-        allocatedSeats = findAdjacentDisabilitySeats(groupSize)
+SEND booking request to backend
+
+
+
+BEGIN allocation process
+
+READ booking request details
+
+IDENTIFY customer strategy
+
+    IF customer type is VIP
+        strategy = VIP
+
+    ELSE IF customer type is Disabled
+        strategy = DISABLED
 
     ELSE
+        strategy = REGULAR
 
-        allocatedSeats = findSingleDisabilitySeat()
 
-    END IF
+SET allowed seat category
 
-    IF allocatedSeats found THEN
+    VIP users -> VIP seats only
+    Disabled users -> Disability seats first
+    Regular users -> Regular seats only
 
-        CONFIRM booking
-        UPDATE theatreLayout
-        DISPLAY allocatedSeats
-        STOP
 
-    ELSE
 
-        DISPLAY "No disability seats available"
-        STOP
+BEGIN REGULAR USER LOGIC
 
-    END IF
+IF customer is REGULAR
+
+    IF only 1 seat requested
+
+        SEARCH edge seats first
+
+        REASON:
+            I wanted solo users to avoid blocking
+            large seat groups in the middle
+
+        IF edge seat found
+            ALLOCATE seat
+
+
+    ELSE IF seats requested between 2 and 7
+
+        SEARCH for fully adjacent seats
+
+        FOR every row
+
+            BUILD continuous seat block
+
+            IF requested group size found together
+                RETURN that block immediately
+
+        END FOR
+
+        REASON:
+            Groups should stay together whenever possible
+
+
+    ELSE IF seats requested more than 7
+
+        FIRST:
+            TRY finding one very large adjacent block
+
+        IF large block not possible
+
+            SEARCH all available seat blocks
+
+            STORE every continuous block found
+
+            SORT blocks from largest to smallest
+
+            ALLOCATE largest nearby blocks first
+
+            CONTINUE until all requested seats are assigned
+
+        END IF
+
+        REASON:
+            I wanted large groups to stay as close together
+            as possible instead of splitting randomly
 
 END IF
 
 
-//---------------------------------------------------
-// STEP 6 — HANDLE VIP USERS
-//---------------------------------------------------
 
-IF isVIP = TRUE THEN
+BEGIN VIP USER LOGIC
 
-    vipSeats = findAvailableVIPSeats(groupSize)
+IF customer is VIP
 
-    IF vipSeats found THEN
+    SEARCH only VIP seating zones
 
-        allocatedSeats = vipSeats
+    IF enough adjacent VIP seats exist
 
-        CONFIRM booking
-        UPDATE theatreLayout
-        DISPLAY allocatedSeats
-        STOP
+        ALLOCATE adjacent VIP seats
+
+    ELSE
+
+        SPLIT booking using nearest VIP blocks
 
     END IF
+
+    REASON:
+        VIP users should always receive premium seating
+        before normal seats are considered
 
 END IF
 
 
-//---------------------------------------------------
-// STEP 7 — RANK ROWS BY USER PREFERENCE
-//---------------------------------------------------
 
-// Real cinema behavior:
-// middle-center > middle-side > back > front
+BEGIN DISABLED USER LOGIC
 
-rankedRows = rankRowsBySeatQuality()
+IF customer is DISABLED
 
-// Avoid front rows unless needed
+    FIRST:
+        SEARCH disability seats
+
+    IF disability seats unavailable
+
+        SECOND:
+            SEARCH nearby front-row regular seats
+
+    IF still unavailable
+
+        THIRD:
+            SEARCH normal regular seating
+
+    END IF
+
+    REASON:
+        I wanted disabled users to receive priority access
+        to accessible seating areas close to entrances
+
+END IF
 
 
-//---------------------------------------------------
-// STEP 8 — SOLO USER LOGIC
-//---------------------------------------------------
 
-IF groupSize = 1 THEN
+BEGIN ADMIN OVERRIDE
 
-    // Preserve center blocks for future groups
+IF admin override enabled
+AND normal allocation fails
 
-    candidateSeats = findEdgeSeats()
+    IGNORE normal restrictions
+
+    ALLOW booking from:
+        - Regular seats
+        - VIP seats
+        - Disability seats
+
+    USE flexible seat splitting
+
+    REASON:
+        Cinema staff may need emergency manual allocation
+        during crowded situations
+
+END IF
+
+
+
+FINAL VALIDATION
+
+IF no seats allocated
+
+    RETURN booking failure
+
+    DISPLAY:
+        "No seats available"
 
 ELSE
 
-    candidateSeats = searchAdjacentSeats(groupSize)
+    FOR every allocated seat
+
+        CONVERT row and column into seat labels
+            Example:
+                A5
+                E12
+                J7
+
+        MARK seat as booked using "X"
+
+    END FOR
+
+    RETURN:
+        - Booking success
+        - Allocated seats
+        - Updated seating layout
+        - Allocation strategy used
 
 END IF
 
 
-//---------------------------------------------------
-// STEP 9 — SEARCH ADJACENT SEATS
-//---------------------------------------------------
 
-FOR each row in rankedRows
+SEND updated seat layout back to frontend
 
-    continuousSeats = []
+REFRESH seating grid visually
 
-    FOR each seat in row
+DISPLAY booking result message
 
-        IF seat available THEN
-
-            ADD seat to continuousSeats
-
-        ELSE
-
-            CLEAR continuousSeats
-
-        END IF
-
-        //---------------------------------------------------
-        // Enough seats found
-        //---------------------------------------------------
-
-        IF size(continuousSeats) = groupSize THEN
-
-            candidateBlock = continuousSeats
-
-            //---------------------------------------------------
-            // STEP 10 — CHECK FOR SCATTERED SINGLE SEATS
-            //---------------------------------------------------
-
-            simulatedLayout = simulateBooking(candidateBlock)
-
-            IF createsSingleSeatGap(simulatedLayout) THEN
-
-                REJECT candidateBlock
-
-            ELSE
-
-                allocatedSeats = candidateBlock
-                GOTO CONFIRM_BOOKING
-
-            END IF
-
-        END IF
-
-    END FOR
-
-END FOR
-
-
-//---------------------------------------------------
-// STEP 11 — HANDLE NEARLY FULL THEATRE
-//---------------------------------------------------
-
-IF occupancyRate >= 85% THEN
-
-    // Relax some restrictions carefully
-
-    allocatedSeats = relaxedSeatSearch(groupSize)
-
-    IF allocatedSeats found THEN
-        GOTO CONFIRM_BOOKING
-    END IF
-
-END IF
-
-
-//---------------------------------------------------
-// STEP 12 — SPLIT GROUP AS LAST OPTION
-//---------------------------------------------------
-
-IF no adjacent seats found THEN
-
-    IF groupSize > largestAvailableBlock THEN
-
-        allocatedSeats = splitGroupCarefully(groupSize)
-
-        IF allocatedSeats found THEN
-            GOTO CONFIRM_BOOKING
-        END IF
-
-    END IF
-
-END IF
-
-
-//---------------------------------------------------
-// STEP 13 — BOOKING FAILURE
-//---------------------------------------------------
-
-DISPLAY "No Adjacent Seats Available"
-STOP
-
-
-//---------------------------------------------------
-// STEP 14 — CONFIRM BOOKING
-//---------------------------------------------------
-
-LABEL CONFIRM_BOOKING
-
-FOR each seat in allocatedSeats
-
-    MARK seat as OCCUPIED
-
-END FOR
-
-UPDATE theatreLayout
-SAVE booking data
-
-DISPLAY "Booking Successful"
-DISPLAY allocatedSeats
-
-STOP
-
-
-//---------------------------------------------------
-// STEP 15 — CANCELLATION LOGIC
-//---------------------------------------------------
-
-FUNCTION cancelBooking(bookingID)
-
-    releasedSeats = getBookingSeats(bookingID)
-
-    FOR each seat in releasedSeats
-
-        MARK seat AVAILABLE
-
-    END FOR
-
-    // Reorganize scattered gaps
-    optimizeReleasedSeats()
-
-END FUNCTION
-
-
-//---------------------------------------------------
-// SUPPORTING FUNCTIONS
-//---------------------------------------------------
-
-FUNCTION createsSingleSeatGap(layout)
-
-    FOR each row
-
-        IF pattern = occupied-empty-occupied THEN
-            RETURN TRUE
-        END IF
-
-    END FOR
-
-    RETURN FALSE
-
-END FUNCTION
-
-
-FUNCTION rankRowsBySeatQuality()
-
-    // Middle-center rows highest score
-    // Front rows lowest score
-
-END FUNCTION
-
-
-FUNCTION relaxedSeatSearch(groupSize)
-
-    // Used during crowded situations
-    // Slightly relax gap-prevention rules
-
-END FUNCTION
-
-
-END ALGORITHM
+END SYSTEM

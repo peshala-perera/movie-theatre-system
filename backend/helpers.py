@@ -1,6 +1,5 @@
 #is seat available
 def is_available(seat):
-
     return seat in ["O", "V", "D"]
 
 #is vip seat

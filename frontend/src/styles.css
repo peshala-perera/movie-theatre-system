@@ -60,10 +60,6 @@ h2 {
   background: blue;
 }
 
-/* .controls {
-  margin-top: 20px;
-} */
-
 .controls {
   margin-top: 20px;
 
@@ -173,11 +169,6 @@ button {
 .cinema-wrapper {
   margin-top: 40px;
 }
-
-/* .screen {
-  width: 50%;
-  margin-top: 60px;
-} */
 
 .screen {
   width: 60%;
